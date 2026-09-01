@@ -1,0 +1,9 @@
+model Emergency {
+    id String @id @default(uuid())
+
+    callerId String
+    caller   User   @relation(fields: [callerId], references: [id])
+
+    patientId String?
+    patient Patient? @relation(fields: [patientId], references: [id])
+}

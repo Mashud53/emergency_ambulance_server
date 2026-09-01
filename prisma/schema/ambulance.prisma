@@ -1,0 +1,15 @@
+model Ambulance{
+    id String @id @default(uuid())
+    segistrationNumber String @unique
+    vehicleNumber String @unique
+
+    type AmbulanceType
+    status AmbulanceStatus @default(OFFLINE)
+
+    driver Driver?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("ambulances")
+}

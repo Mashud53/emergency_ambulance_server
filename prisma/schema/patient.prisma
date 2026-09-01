@@ -1,0 +1,17 @@
+model Patient{
+    id String @id @default(uuid())
+
+    name    String
+    age  Int?
+    gender String?
+    bloodGroup String?
+
+    emergencyContact String?
+
+    emergencies Emergency[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("patients")
+}

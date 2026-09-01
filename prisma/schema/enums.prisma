@@ -1,0 +1,29 @@
+enum Role {
+  SUPER_ADMIN
+  DISPATCHER
+  CALLER
+  DRIVER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  SUSPEND
+}
+
+enum AmbulanceStatus {
+  AVAILABLE
+  DISPATCHED
+  ON_TRIP
+  OFFLINE
+  MAINTENANCE
+}
+
+enum AmbulanceType {
+  BASIC
+  ADVANCED
+  ICU
+  CARDIAC
+  NEONATAL
+}
+

@@ -11,6 +11,11 @@ enum UserStatus {
   SUSPEND
 }
 
+enum AuthProvider {
+  GOOGLE
+  CREDENTIALS
+}
+
 enum AmbulanceStatus {
   AVAILABLE
   DISPATCHED

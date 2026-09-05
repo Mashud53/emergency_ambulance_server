@@ -5,9 +5,9 @@ import { sendResponse } from '../../utils/sendResponse'
 import { IRequestUser } from './auth.interface'
 import { AuthService } from './auth.service'
 
-const registerPatient = catchAsync(async (req: Request, res: Response) => {
+const registerUser = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
-    const result = await AuthService.registerPatient(payload)
+    const result = await AuthService.registerUser(payload)
 
     const { accessToken, refreshToken, user } = result
 
@@ -112,10 +112,24 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+const googleLogin = catchAsync(async (req: Request, res: Response) => {
+    
+
+   
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'New tokens generated successfully',
+        data: {},
+    })
+})
+
 
 export const AuthController = {
-    registerPatient,
+    registerUser,
     loginUser,
     getMe,
     refreshToken,
+    googleLogin
 }

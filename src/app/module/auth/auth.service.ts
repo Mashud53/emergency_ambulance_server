@@ -1,17 +1,20 @@
 import bcrypt from 'bcryptjs'
 import { JwtPayload, SignOptions } from 'jsonwebtoken'
-import { Role, UserStatus } from '../../../generated/prisma/enums'
+import { AuthProvider, Role, UserStatus } from '../../../generated/prisma/enums'
 import config from '../../config'
 import { prisma } from '../../lib/prisma'
 import { jwtUtils } from '../../utils/jwt'
 import {
+    IgogleLoginPayload,
     ILoginUserPayload,
     IRegisterPatientPayload,
     IRequestUser
 } from './auth.interface'
+import { OAuth2Client, TokenPayload } from 'google-auth-library'
+import { googleClient } from '../../lib/googleAuth'
 
 
-const registerPatient = async (payload: IRegisterPatientPayload) => {
+const registerUser = async (payload: IRegisterPatientPayload) => {
     const { name, password } = payload
     const email = payload.email.trim().toLowerCase()
 
@@ -82,9 +85,9 @@ const loginUser = async (payload: ILoginUserPayload) => {
         throw new Error('User is blocked')
     }
 
-    
 
-    const isPasswordMatched = await bcrypt.compare(password, user.password)
+
+    const isPasswordMatched = await bcrypt.compare(password, user.password as string)
 
     if (!isPasswordMatched) {
         throw new Error('Invalid credentials')
@@ -120,7 +123,7 @@ const getMe = async (user: IRequestUser) => {
         where: {
             id: user.userId,
         },
-        
+
         omit: {
             password: true,
         },
@@ -175,11 +178,89 @@ const refreshToken = async (token: string) => {
     }
 }
 
+const goolgeLogin = async (payload: IgogleLoginPayload) => {
+
+    let googleIdtokenPayload: TokenPayload | null | undefined = null;
+    try {
+        const result = await googleClient.verifyIdToken({
+            idToken: payload.idToken,
+            audience: config.google_client_id
+        })
+
+        googleIdtokenPayload = result.getPayload()
+
+
+
+    } catch (error) {
+        console.log("Google Id Token Verification Failed:", error);
+        throw new Error("Invalid or Expired Google Id Token")
+
+    }
+
+    if (!googleIdtokenPayload) {
+        throw new Error("Invalid or Expired Google Id Token")
+    }
+    if(!googleIdtokenPayload.email){
+        throw new Error("Email not Found")
+    }
+    if(!googleIdtokenPayload.name){
+        throw new Error("user name not Found")
+    }
+
+    const ifUserExistWithGoogleAuth = await prisma.user.findUnique({
+        where: {
+            email: googleIdtokenPayload.email,
+            role: Role.CALLER,
+            googleId: googleIdtokenPayload.sub
+        }
+    })
+    let user = ifUserExistWithGoogleAuth;
+    if(!user){
+        user = await prisma.user.create({
+            data:{
+                name: googleIdtokenPayload.name,
+                email:googleIdtokenPayload.email,
+                role: Role.CALLER,
+                googleId: googleIdtokenPayload.sub,
+                authProvider: AuthProvider.GOOGLE,
+                emailVerified: true
+            }
+        })
+    }
+    const jwtPayload = {
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+    }
+
+    const accessToken = jwtUtils.createToken(
+        jwtPayload,
+        config.jwt_access_secret,
+        config.jwt_access_expires_in as SignOptions
+    );
+
+    const refreshToken = jwtUtils.createToken(
+        jwtPayload,
+        config.jwt_refresh_secret,
+        config.jwt_refresh_expires_in as SignOptions
+    );
+
+    return {
+        accessToken,
+        refreshToken
+    }
+
+
+
+}
+
 
 
 export const AuthService = {
-    registerPatient,
+    registerUser,
     loginUser,
     getMe,
-    refreshToken
+    refreshToken,
+    goolgeLogin
 }

@@ -6,4 +6,24 @@ model Emergency {
 
     patientId String?
     patient Patient? @relation(fields: [patientId], references: [id])
+
+    emergencyType EmergencyType
+    severity    EmergencySeverity
+
+    description String?
+
+    pickupAddress   String?
+    destinationAddress String?
+
+    status EmergencyStatus @default(PENDING)
+    
+    ambulanceId String?
+    ambulance   Ambulance? @relation(fields: [ambulanceId], references: [id]) 
+
+    requestedAt DateTime @default(now())
+    acceptedAt DateTime?
+    completedAt DateTime?
+
+    createdAt   DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }

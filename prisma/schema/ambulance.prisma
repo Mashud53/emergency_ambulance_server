@@ -8,6 +8,8 @@ model Ambulance{
 
     driver Driver?
 
+    emergency   Emergency[]
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 

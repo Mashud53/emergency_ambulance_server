@@ -10,7 +10,7 @@ import {
     IRegisterPatientPayload,
     IRequestUser
 } from './auth.interface'
-import { OAuth2Client, TokenPayload } from 'google-auth-library'
+import { TokenPayload } from 'google-auth-library'
 import { googleClient } from '../../lib/googleAuth'
 
 
@@ -85,7 +85,10 @@ const loginUser = async (payload: ILoginUserPayload) => {
         throw new Error('User is blocked')
     }
 
+    if (user.password === null && user.googleId != null) {
+        throw new Error("User Already has account Register with google")
 
+    }
 
     const isPasswordMatched = await bcrypt.compare(password, user.password as string)
 
@@ -200,10 +203,10 @@ const goolgeLogin = async (payload: IgogleLoginPayload) => {
     if (!googleIdtokenPayload) {
         throw new Error("Invalid or Expired Google Id Token")
     }
-    if(!googleIdtokenPayload.email){
+    if (!googleIdtokenPayload.email) {
         throw new Error("Email not Found")
     }
-    if(!googleIdtokenPayload.name){
+    if (!googleIdtokenPayload.name) {
         throw new Error("user name not Found")
     }
 
@@ -215,18 +218,52 @@ const goolgeLogin = async (payload: IgogleLoginPayload) => {
         }
     })
     let user = ifUserExistWithGoogleAuth;
-    if(!user){
-        user = await prisma.user.create({
-            data:{
-                name: googleIdtokenPayload.name,
-                email:googleIdtokenPayload.email,
+    if (!ifUserExistWithGoogleAuth) {
+
+        const ifUserExistWithCrediential = await prisma.user.findUnique({
+            where: {
+                email: googleIdtokenPayload.email,
                 role: Role.CALLER,
-                googleId: googleIdtokenPayload.sub,
-                authProvider: AuthProvider.GOOGLE,
-                emailVerified: true
+                authProvider: AuthProvider.CREDENTIALS
             }
         })
+        if (ifUserExistWithCrediential) {
+            if (ifUserExistWithCrediential.status === UserStatus.BLOCKED) {
+                throw new Error("user is Blocked")
+            }
+
+            user = await prisma.user.update({
+                where: {
+                    id: ifUserExistWithCrediential.id
+                },
+                data: {
+                    googleId: googleIdtokenPayload.sub
+                }
+            })
+        } else {
+            user = await prisma.user.create({
+                data: {
+                    name: googleIdtokenPayload.name,
+                    email: googleIdtokenPayload.email,
+                    role: Role.CALLER,
+                    googleId: googleIdtokenPayload.sub,
+                    authProvider: AuthProvider.GOOGLE,
+                    emailVerified: true
+                }
+            })
+        }
+
+
     }
+    if (!user) {
+        throw new Error("User not found")
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+        throw new Error("user is Blocked")
+    }
+
+
     const jwtPayload = {
         userId: user.id,
         name: user.name,

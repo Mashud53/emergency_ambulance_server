@@ -1,11 +1,12 @@
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import express, { Application, Request, Response } from 'express'
+import express, { Application, NextFunction, Request, Response } from 'express'
 import httpStatus from "http-status"
 import config from './app/config'
 import { globalErrorHandler } from './app/middleware/globalErrorHandler'
 import { notFound } from './app/middleware/notFound'
 import { AuthRoutes } from './app/module/auth/auth.route'
+import z from 'zod'
 
 const app: Application = express()
 
@@ -24,6 +25,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use('/api/auth', AuthRoutes)
+
 
 // Basic route
 app.get('/', async (req: Request, res: Response) => {

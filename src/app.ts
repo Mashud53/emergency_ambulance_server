@@ -7,6 +7,7 @@ import { globalErrorHandler } from './app/middleware/globalErrorHandler'
 import { notFound } from './app/middleware/notFound'
 import { AuthRoutes } from './app/module/auth/auth.route'
 import z from 'zod'
+import { redisClient } from './app/lib/redis'
 
 const app: Application = express()
 
@@ -25,6 +26,28 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use('/api/auth', AuthRoutes)
+
+// app.get("/test", async(req: Request, res: Response, next: NextFunction)=>{
+//     try {
+//         await redisClient.set("forgot-password-otp:user@gmail.com","123456",{
+//             expiration:{
+//                 type:"EX",
+//                 value: 60
+//             }
+//         })
+
+
+//         res.status(httpStatus.OK).json({
+//         success: true,
+//         message: 'Redis test',
+//         data:{}
+//     })
+//     } catch (error) {
+//         console.log(error);
+//         next(error)
+        
+//     }
+// })
 
 
 // Basic route

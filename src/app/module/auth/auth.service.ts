@@ -5,13 +5,17 @@ import config from '../../config'
 import { prisma } from '../../lib/prisma'
 import { jwtUtils } from '../../utils/jwt'
 import {
+    IFortgotPasswordPayload,
     IgogleLoginPayload,
     ILoginUserPayload,
     IRegisterPatientPayload,
-    IRequestUser
+    IRequestUser,
+    IresetPasswordPayload
 } from './auth.interface'
 import { TokenPayload } from 'google-auth-library'
 import { googleClient } from '../../lib/googleAuth'
+import crypto from "crypto"
+import { redisClient } from '../../lib/redis'
 
 
 const registerUser = async (payload: IRegisterPatientPayload) => {
@@ -292,6 +296,80 @@ const goolgeLogin = async (payload: IgogleLoginPayload) => {
 
 }
 
+const forgotPassword =async(payload: IFortgotPasswordPayload)=>{
+    const {email} = payload;
+
+    const isUserExist = await prisma.user.findUnique({
+        where:{email}
+    });
+
+    if(!isUserExist){
+        throw new Error("User does not Exist")
+    }
+
+    if(isUserExist.status ==="BLOCKED"){
+        throw new Error("User is blocked")
+    }
+
+    if(isUserExist.authProvider !=="CREDENTIALS"){
+        throw new Error("User has an account with Google")
+    }
+
+    const otp = crypto.randomInt(100000, 1000000);
+    const key = `forgot-password-otp: ${isUserExist.email}`
+
+    await redisClient.set(key, otp,{
+        expiration:{
+            type:"EX",
+            value: 5* 60
+        }
+    })
+}
+
+const resetPassword = async(payload: IresetPasswordPayload)=>{
+     const {email, otp, newPassword} = payload;
+
+    const isUserExist = await prisma.user.findUnique({
+        where:{email}
+    });
+
+    if(!isUserExist){
+        throw new Error("User does not Exist")
+    }
+
+    if(isUserExist.status ==="BLOCKED"){
+        throw new Error("User is blocked")
+    }
+
+    if(isUserExist.authProvider !=="CREDENTIALS"){
+        throw new Error("User has an account with Google")
+    }
+     const key = `forgot-password-otp: ${isUserExist.email}`
+
+    const redisOtp = await redisClient.get(key)
+
+    if(!redisOtp){
+        throw new Error("invalid OTP ")
+    }
+    if(redisOtp !== otp){
+        throw new Error("OTP does not matched")
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, Number(config.bcrypt_salt_rounds));
+
+    await prisma.user.update({
+        where:{
+            email: isUserExist.email
+        },
+        data:{
+            password: hashedPassword
+        }
+    })
+
+    await redisClient.del([key]);
+
+}
+
 
 
 export const AuthService = {
@@ -299,5 +377,7 @@ export const AuthService = {
     loginUser,
     getMe,
     refreshToken,
-    goolgeLogin
+    goolgeLogin,
+    forgotPassword,
+    resetPassword
 }

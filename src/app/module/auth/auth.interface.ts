@@ -21,3 +21,13 @@ export interface IRequestUser {
 export interface IgogleLoginPayload{
     idToken: string
 }
+
+export interface IFortgotPasswordPayload{
+    email:string
+}
+
+export interface IresetPasswordPayload{
+    email: string;
+    newPassword: string;
+    otp: string;
+}

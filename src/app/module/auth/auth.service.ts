@@ -16,6 +16,10 @@ import { TokenPayload } from 'google-auth-library'
 import { googleClient } from '../../lib/googleAuth'
 import crypto from "crypto"
 import { redisClient } from '../../lib/redis'
+import { transporter } from '../../lib/nodeMailer'
+import ejs from "ejs"
+import path from 'path'
+
 
 
 const registerUser = async (payload: IRegisterPatientPayload) => {
@@ -296,77 +300,108 @@ const goolgeLogin = async (payload: IgogleLoginPayload) => {
 
 }
 
-const forgotPassword =async(payload: IFortgotPasswordPayload)=>{
-    const {email} = payload;
+const forgotPassword = async (payload: IFortgotPasswordPayload) => {
+    const { email } = payload;
 
     const isUserExist = await prisma.user.findUnique({
-        where:{email}
+        where: { email }
     });
 
-    if(!isUserExist){
+    if (!isUserExist) {
         throw new Error("User does not Exist")
     }
 
-    if(isUserExist.status ==="BLOCKED"){
+    if (isUserExist.status === "BLOCKED") {
         throw new Error("User is blocked")
     }
 
-    if(isUserExist.authProvider !=="CREDENTIALS"){
+    if (isUserExist.authProvider !== "CREDENTIALS") {
         throw new Error("User has an account with Google")
     }
 
     const otp = crypto.randomInt(100000, 1000000);
     const key = `forgot-password-otp: ${isUserExist.email}`
 
-    await redisClient.set(key, otp,{
-        expiration:{
-            type:"EX",
-            value: 5* 60
+    await redisClient.set(key, otp, {
+        expiration: {
+            type: "EX",
+            value: 5 * 60
         }
+    })
+
+    const templatePath = path.join(process.cwd(), "src/app/templates/forgotPassword.ejs")
+
+    const html = await ejs.renderFile(templatePath, {
+        name: isUserExist.name,
+        otp
+    })
+
+    await transporter.sendMail({
+        from: config.smtp_sender,
+        to: isUserExist.email,
+        subject: "Password Changed",
+        html
     })
 }
 
-const resetPassword = async(payload: IresetPasswordPayload)=>{
-     const {email, otp, newPassword} = payload;
+const resetPassword = async (payload: IresetPasswordPayload) => {
+    const { email, otp, newPassword } = payload;
 
     const isUserExist = await prisma.user.findUnique({
-        where:{email}
+        where: { email }
     });
 
-    if(!isUserExist){
+    if (!isUserExist) {
         throw new Error("User does not Exist")
     }
 
-    if(isUserExist.status ==="BLOCKED"){
+    if (isUserExist.status === "BLOCKED") {
         throw new Error("User is blocked")
     }
 
-    if(isUserExist.authProvider !=="CREDENTIALS"){
+    if (isUserExist.authProvider !== "CREDENTIALS") {
         throw new Error("User has an account with Google")
     }
-     const key = `forgot-password-otp: ${isUserExist.email}`
+    const key = `forgot-password-otp: ${isUserExist.email}`
 
     const redisOtp = await redisClient.get(key)
 
-    if(!redisOtp){
+    if (!redisOtp) {
         throw new Error("invalid OTP ")
     }
-    if(redisOtp !== otp){
+    if (redisOtp !== otp) {
         throw new Error("OTP does not matched")
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, Number(config.bcrypt_salt_rounds));
 
     await prisma.user.update({
-        where:{
+        where: {
             email: isUserExist.email
         },
-        data:{
+        data: {
             password: hashedPassword
         }
     })
 
     await redisClient.del([key]);
+
+     const templatePath = path.join(process.cwd(), "src/app/templates/resetPassword.ejs")
+
+    const html = await ejs.renderFile(templatePath, {
+        name: isUserExist.name,
+        email: isUserExist.email,
+        changedAt: Date.now(),
+    })
+
+    await transporter.sendMail({
+        from: config.smtp_sender,
+        to: isUserExist.email,
+        subject: "Password Changed",
+        html
+    })
+
+
 
 }
 

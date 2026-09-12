@@ -5,10 +5,15 @@ export interface ILoginUserPayload {
     password: string
 }
 
-export interface IRegisterPatientPayload {
+export interface IRegisterUserPayload {
     name: string
     email: string
     password: string
+}
+export interface IVerifiyEmailPayload {
+    email: string;
+    otp: string;
+
 }
 
 export interface IRequestUser {
@@ -18,15 +23,15 @@ export interface IRequestUser {
     role: Role
 }
 
-export interface IgogleLoginPayload{
+export interface IgogleLoginPayload {
     idToken: string
 }
 
-export interface IFortgotPasswordPayload{
-    email:string
+export interface IFortgotPasswordPayload {
+    email: string
 }
 
-export interface IresetPasswordPayload{
+export interface IresetPasswordPayload {
     email: string;
     newPassword: string;
     otp: string;

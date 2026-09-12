@@ -10,6 +10,10 @@ export const UserRegisterZodSchema = z.object({
         .regex(/[0-9]/, "Password must contain atleast one Number")
         .regex(/[^A-Za-z0-9]/, "Password must contain atleast one special character")
 })
+export const UserEmailVerifyZodSchema = z.object({
+    email: z.email(),
+    otp: z.string().length(6)
+})
 
 
 export const UserLoginZodSchema = z.object({
@@ -23,7 +27,7 @@ export const UserLoginZodSchema = z.object({
 })
 
 export const ForgotPasswordZodSchema = z.object({
-    email:z.email()
+    email: z.email()
 })
 
 export const ResetPasswordZodSchema = z.object({

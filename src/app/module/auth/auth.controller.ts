@@ -10,33 +10,47 @@ import { AuthService } from './auth.service'
 const registerUser = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
 
-    const result = await AuthService.registerUser(payload)
-
-    const { accessToken, refreshToken, user } = result
-
-    res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
-
+    await AuthService.registerUser(payload)
+    
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
         success: true,
-        message: 'Caller registered successfully',
-        data: {
-            accessToken,
-            refreshToken,
-            user,
-        },
+        message: 'Email Verify OTP send to email successfully',
+        data: {},
     })
+})
+const VerifyUserEmail = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body
+
+    const result = await AuthService.verifyUserEmail(payload)
+    
+        const { accessToken, refreshToken, user } = result
+    
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "none",
+            maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
+        })
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "none",
+            maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+        })
+        sendResponse(res, {
+            statusCode: httpStatus.CREATED,
+            success: true,
+            message: 'User verified successfully',
+            data: {
+                accessToken,
+                refreshToken,
+                user,
+            },
+        })
+    
+
+    
 })
 
 const loginUser = catchAsync(async (req: Request, res: Response) => {
@@ -151,9 +165,9 @@ const forgotPassword = catchAsync(async (req: Request, res: Response) => {
 
     const payload = req.body;
 
-    const result = await AuthService.forgotPassword(payload)
+    await AuthService.forgotPassword(payload)
 
-   
+
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -166,7 +180,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 
     const payload = req.body;
 
-    await AuthService.resetPassword(payload)  
+    await AuthService.resetPassword(payload)
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -180,6 +194,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 
 export const AuthController = {
     registerUser,
+    VerifyUserEmail,
     loginUser,
     getMe,
     refreshToken,

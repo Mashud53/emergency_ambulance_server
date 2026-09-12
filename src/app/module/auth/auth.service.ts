@@ -8,9 +8,10 @@ import {
     IFortgotPasswordPayload,
     IgogleLoginPayload,
     ILoginUserPayload,
-    IRegisterPatientPayload,
+    IRegisterUserPayload,
     IRequestUser,
-    IresetPasswordPayload
+    IresetPasswordPayload,
+    IVerifiyEmailPayload
 } from './auth.interface'
 import { TokenPayload } from 'google-auth-library'
 import { googleClient } from '../../lib/googleAuth'
@@ -22,7 +23,7 @@ import path from 'path'
 
 
 
-const registerUser = async (payload: IRegisterPatientPayload) => {
+const registerUser = async (payload: IRegisterUserPayload) => {
     const { name, password } = payload
     const email = payload.email.trim().toLowerCase()
 
@@ -36,18 +37,113 @@ const registerUser = async (payload: IRegisterPatientPayload) => {
 
     const hashedPassword = await bcrypt.hash(password, 8)
 
+
+
+    const otpValue = crypto.randomInt(100000, 1000000);
+    const otpKey = `user-reg-otp: ${email}`
+
+
+    await redisClient.set(otpKey, otpValue, {
+        expiration: {
+            type: "EX",
+            value: 5 * 60
+        }
+    })
+
+    const redisUserDataPayload = {
+        name,
+        email,
+        password: hashedPassword
+    }
+    const userRegKey = `user-reg-data: ${email}`
+
+    await redisClient.set(userRegKey, JSON.stringify(redisUserDataPayload), {
+        expiration: {
+            type: "EX",
+            value: 5 * 60
+        }
+    })
+
+    const templatePath = path.join(process.cwd(), "src/app/templates/verifyEmail.ejs")
+
+    const html = await ejs.renderFile(templatePath, {
+        name: name,
+        otp: otpValue
+    })
+
+    await transporter.sendMail({
+        from: config.smtp_sender,
+        to: email,
+        subject: "Verify email",
+        html
+    })
+
+}
+
+const verifyUserEmail = async (payload: IVerifiyEmailPayload) => {
+
+    const otp = payload.otp;
+    const email = payload.email.trim().toLowerCase()
+
+    const isUserExists = await prisma.user.findUnique({
+        where: { email },
+    })
+
+
+
+    if (isUserExists?.emailVerified) {
+        throw new Error('Email already verified')
+    }
+    if (isUserExists?.status === "BLOCKED") {
+        throw new Error("User is blocked")
+    }
+
+    const otpKey = `user-reg-otp: ${email}`
+    const redisOtp = await redisClient.get(otpKey)
+
+    if (!redisOtp) {
+        throw new Error("invalid OTP ")
+    }
+    if (redisOtp !== otp) {
+        throw new Error("OTP does not matched")
+    }
+
+    await redisClient.del(otpKey)
+
+    const userRegKey = `user-reg-data: ${email}`
+    const redisUserData = await redisClient.get(userRegKey)
+    if (!redisUserData) {
+        throw new Error("User doesnot exist")
+    }
+    const userPayload: IRegisterUserPayload = JSON.parse(redisUserData)
+
     const createdUser = await prisma.user.create({
         data: {
-            name,
-            email,
-            password: hashedPassword,
+            name: userPayload.name,
+            email: userPayload.email,
+            password: userPayload.password,
             role: Role.CALLER,
             status: UserStatus.ACTIVE,
-            emailVerified: false,
+            emailVerified: true,
 
         },
         omit: { password: true },
 
+    })
+    await redisClient.del(userRegKey)
+     const templatePath = path.join(process.cwd(), "src/app/templates/welcome.ejs")
+
+    const html = await ejs.renderFile(templatePath, {
+        name: userPayload.name,
+        email: userPayload.email,
+        
+    })
+
+    await transporter.sendMail({
+        from: config.smtp_sender,
+        to: userPayload.email,
+        subject: "Welcome to Emergency Ambulance Service",
+        html
     })
 
     const { ...user } = createdUser
@@ -75,6 +171,7 @@ const registerUser = async (payload: IRegisterPatientPayload) => {
         accessToken,
         refreshToken
     }
+
 }
 
 const loginUser = async (payload: ILoginUserPayload) => {
@@ -386,7 +483,7 @@ const resetPassword = async (payload: IresetPasswordPayload) => {
 
     await redisClient.del([key]);
 
-     const templatePath = path.join(process.cwd(), "src/app/templates/resetPassword.ejs")
+    const templatePath = path.join(process.cwd(), "src/app/templates/resetPassword.ejs")
 
     const html = await ejs.renderFile(templatePath, {
         name: isUserExist.name,
@@ -409,6 +506,7 @@ const resetPassword = async (payload: IresetPasswordPayload) => {
 
 export const AuthService = {
     registerUser,
+    verifyUserEmail,
     loginUser,
     getMe,
     refreshToken,

@@ -10,6 +10,7 @@ model User {
   status             UserStatus   @default(ACTIVE)
   needPasswordChange Boolean      @default(false)
   profileImage       String?
+  imagePublicId      String?
 
   driver Driver?
 

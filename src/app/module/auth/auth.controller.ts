@@ -41,7 +41,7 @@ const VerifyUserEmail = catchAsync(async (req: Request, res: Response) => {
         sendResponse(res, {
             statusCode: httpStatus.CREATED,
             success: true,
-            message: 'User verified successfully',
+            message: 'Email verified successfully',
             data: {
                 accessToken,
                 refreshToken,

@@ -9,6 +9,8 @@ import { AuthRoutes } from './app/module/auth/auth.route'
 import z from 'zod'
 import { redisClient } from './app/lib/redis'
 import { UserRoutes } from './app/module/user/user.route'
+import { getBkashIdToken } from './app/lib/bkash'
+import { EmergencyRoutes } from './app/module/emergency/emergency.route'
 
 const app: Application = express()
 
@@ -28,28 +30,25 @@ app.use(cookieParser())
 
 app.use('/api/auth', AuthRoutes)
 app.use('/api/user', UserRoutes)
+app.use('/api/emergency', EmergencyRoutes)
 
-// app.get("/test", async(req: Request, res: Response, next: NextFunction)=>{
-//     try {
-//         await redisClient.set("forgot-password-otp:user@gmail.com","123456",{
-//             expiration:{
-//                 type:"EX",
-//                 value: 60
-//             }
-//         })
+app.get("/test", async(req: Request, res: Response, next: NextFunction)=>{
+    try {
+       const grantIdToken = await getBkashIdToken()
+       console.log(grantIdToken);
 
 
-//         res.status(httpStatus.OK).json({
-//         success: true,
-//         message: 'Redis test',
-//         data:{}
-//     })
-//     } catch (error) {
-//         console.log(error);
-//         next(error)
+        res.status(httpStatus.OK).json({
+        success: true,
+        message: 'bkash test',
+        data:{}
+    })
+    } catch (error) {
+        console.log(error);
+        next(error)
         
-//     }
-// })
+    }
+})
 
 
 // Basic route

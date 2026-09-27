@@ -7,8 +7,8 @@ model Emergency {
     patientId String?
     patient Patient? @relation(fields: [patientId], references: [id])
 
-    emergencyType EmergencyType
-    severity    EmergencySeverity
+    emergencyType EmergencyType?
+    severity    EmergencySeverity?
 
     description String?
 
@@ -24,6 +24,9 @@ model Emergency {
     acceptedAt DateTime?
     completedAt DateTime?
 
+    payment Payment?
+
     createdAt   DateTime @default(now())
     updatedAt DateTime @updatedAt
+    @@map("emergencys")
 }

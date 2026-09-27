@@ -69,3 +69,10 @@ enum EmergencyType {
   POISONING
   OTHER
 }
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  CANCELLED
+}

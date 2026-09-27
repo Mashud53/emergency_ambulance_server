@@ -5,8 +5,10 @@ import httpStatus from "http-status"
 import { EmergencyService } from "./emergency.service"
 
  const callAmbulance = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body;
+    const user =req.user!
 
-    const result = await EmergencyService.callAmbulance()
+    const result = await EmergencyService.callAmbulance(payload, user)
    
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
@@ -19,14 +21,9 @@ import { EmergencyService } from "./emergency.service"
 const callAmbulanceCallback=catchAsync(async (req: Request, res: Response) => {
 
    console.log(req.query, "req.query");
-   const result = EmergencyService.callAmbulanceCallback()
-   
-    sendResponse(res, {
-        statusCode: httpStatus.CREATED,
-        success: true,
-        message: 'Payment Created successfully',
-        data: result,
-    })
+   const {executePaymentResult, redirectUrl} = await EmergencyService.callAmbulanceCallback(req.query)
+   res.redirect(redirectUrl)
+    
 })
 
 
